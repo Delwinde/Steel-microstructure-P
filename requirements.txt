@@ -1,4 +1,6 @@
-streamlit
+
 tensorflow
-Pillow
 numpy
+Pillow
+streamlit
+plotly
