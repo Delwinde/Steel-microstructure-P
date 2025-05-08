@@ -3,4 +3,3 @@ tensorflow
 streamlit
 Pillow
 numpy
-opencv-python
