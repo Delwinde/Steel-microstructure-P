@@ -1,44 +1,36 @@
-
+# Import necessary libraries  
 import streamlit as st  
 import numpy as np  
-from tensorflow import keras  
-from tensorflow.keras.preprocessing import image  
+from keras.models import load_model  
+from keras.preprocessing import image  
   
 # Load the trained model  
-model = keras.models.load_model('my_model.keras')  
+model = load_model('my_model.keras')  
   
-# Define preprocessing parameters  
-image_height, image_width = 128, 128  
+# Define the class indices mapping  
+class_indices = {0: 'Martensite or Banite', 1: 'Pearlite', 2: 'Similar', 3: 'Spherodized Cementite'}  
   
-# Function to load and preprocess the image  
-def load_and_preprocess_image(img_path, target_size):  
-    img = image.load_img(img_path, target_size=target_size)  
-    img_array = image.img_to_array(img)  
-    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension  
-    img_array /= 255.0  # Normalize to [0, 1]  
-    return img_array  
-  
-# Streamlit app layout  
-st.title("Microstructure Classification")  
-st.write("Upload an image of a microstructure to classify it.")  
+# Set up the Streamlit app layout  
+st.title("Material Classification Model")  
+st.write("Upload an image of the material to get a prediction.")  
   
 # File uploader for image input  
-uploaded_file = st.file_uploader("Choose an image...", type=["png", "jpg", "jpeg","tif"])  
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png", "tif"])  
   
 if uploaded_file is not None:  
     # Load and preprocess the image  
-    preprocessed_image = load_and_preprocess_image(uploaded_file, (image_height, image_width))  
+    test_image = image.load_img(uploaded_file, target_size=(128, 128))  
+    test_image = image.img_to_array(test_image)  
+    test_image = np.expand_dims(test_image, axis=0)  
   
-    # Make predictions  
-    predictions = model.predict(preprocessed_image)  
+    # Use the loaded model to make the prediction  
+    result = model.predict(test_image)  
   
-    # Get the predicted class index  
-    predicted_class_index = np.argmax(predictions, axis=1)  
+    # Access the predicted class index  
+    predicted_class_index = np.argmax(result[0])  
   
-    # Map the predicted class index back to the label  
-    label_mapping = {0: 'Martensite or Banite', 1: 'Pearlite', 2: 'Similar', 3: 'Spherodized Cementite'} 
-    predicted_label = label_mapping[predicted_class_index[0]]  
+    # Get the prediction using the class_indices mapping  
+    prediction = class_indices[predicted_class_index]  
   
-    # Display the result  
-    st.write(f'Predicted class index: {predicted_class_index[0]}')  
-    st.write(f'Predicted label: {predicted_label}')  
+    # Display the prediction  
+    st.write(f"Prediction: {prediction}")  
