@@ -23,7 +23,7 @@ st.title("Microstructure Classification")
 st.write("Upload an image of a microstructure to classify it.")  
   
 # File uploader for image input  
-uploaded_file = st.file_uploader("Choose an image...", type=["png", "jpg", "jpeg"])  
+uploaded_file = st.file_uploader("Choose an image...", type=["png", "jpg", "jpeg","tif"])  
   
 if uploaded_file is not None:  
     # Load and preprocess the image  
