@@ -36,8 +36,7 @@ if uploaded_file is not None:
     predicted_class_index = np.argmax(predictions, axis=1)  
   
     # Map the predicted class index back to the label  
-    label_mapping = {0: 'pearlite', 1: 'spheroidite', 2: 'pearlite+spheroidite',  
-                     3: 'spheroidite+widmanstatten', 4: 'network', 5: 'martensite'}  
+    label_mapping = {0: 'Martensite or Banite', 1: 'Pearlite', 2: 'Similar', 3: 'Spherodized Cementite'} 
     predicted_label = label_mapping[predicted_class_index[0]]  
   
     # Display the result  
