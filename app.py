@@ -168,4 +168,4 @@ if uploaded_file is not None:
 
 # Add footer
 st.markdown("---")
-st.markdown("*Developed using CNN for steel microstructure classification*")
+st.markdown("*Developed by Delwinde Sham-una*")
