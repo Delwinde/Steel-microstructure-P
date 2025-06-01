@@ -166,6 +166,71 @@ if uploaded_file is not None:
             else:
                 st.info("ℹ️ Mixed microstructure detected. Further analysis may be needed for specific applications.")
 
+            # --- Downloadable Report Section ---
+            import datetime
+            import base64
+            
+            # Generate the report as a string
+            report_lines = []
+            report_lines.append(f"Steel Microstructure Classification Report
+")
+            report_lines.append(f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+")
+            report_lines.append(f"
+---
+")
+            report_lines.append(f"Prediction: {prediction}
+")
+            report_lines.append(f"Confidence: {confidence:.1f}%
+")
+            report_lines.append(f"
+Class Probabilities:
+")
+            for idx, class_name in class_indices.items():
+                report_lines.append(f"- {class_name}: {probabilities[idx]*100:.1f}%
+")
+            report_lines.append(f"
+---
+")
+            report_lines.append(f"Microstructure Description: {info['description']}
+")
+            report_lines.append(f"Key Characteristics:
+")
+            for char in info['characteristics']:
+                report_lines.append(f"  - {char}
+")
+            report_lines.append(f"Typical Composition: {info['composition']}
+")
+            report_lines.append(f"Mechanical Properties: {info['properties']}
+")
+            report_lines.append(f"Formation Process: {info['formation']}
+")
+            report_lines.append(f"Industrial Applications: {info['applications']}
+")
+            
+            # Add recommendations
+            if prediction == 'Martensite or Bainite':
+                report_lines.append("Recommendation: This microstructure indicates rapid cooling. Consider tempering if high toughness is required.
+")
+            elif prediction == 'Pearlite':
+                report_lines.append("Recommendation: This microstructure provides good strength-ductility balance. Suitable for many structural applications.
+")
+            elif prediction == 'Spheroidized Cementite':
+                report_lines.append("Recommendation: This microstructure offers excellent machinability. Ideal for machining operations.
+")
+            else:
+                report_lines.append("Recommendation: Mixed microstructure detected. Further analysis may be needed for specific applications.
+")
+            
+            report_str = ''.join(report_lines)
+            
+            # Encode report for download
+            b64 = base64.b64encode(report_str.encode()).decode()
+            href = f'<a href="data:file/txt;base64,{b64}" download="microstructure_report.txt">📥 Download Full Report</a>'
+            st.markdown(href, unsafe_allow_html=True)
+
+
+
 # Add footer
 st.markdown("---")
-st.markdown("*Developed by Delwinde Sham-una*")
+st.markdown("*Developed Delwinde Sham-una*")
