@@ -79,12 +79,7 @@ if not st.session_state['logged_in']:
         login()  
     else:  
         signup()  
-    # Handle rerun after login/signup  
-    if st.session_state.get('do_rerun', False):  
-        st.session_state['do_rerun'] = False  
-        st.experimental_rerun()  
-    st.stop()  
-  
+    
 # Main app after login  
 # Load the trained model  
 model = load_model('my_model.keras')  
