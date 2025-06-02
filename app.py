@@ -81,6 +81,8 @@ if not st.session_state['logged_in']:
         signup()  
     
 # Main app after login  
+st.success('Welcome, ' + st.session_state['current_user'] + '!')  
+logout()  
 # Load the trained model  
 model = load_model('my_model.keras')  
 
