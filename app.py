@@ -46,15 +46,8 @@ def logout():
         st.session_state['current_user'] = None  
         st.session_state['do_rerun'] = True  
   
-def generate_report(prediction, probabilities, filename='microstructure_report.csv'):  
-    output = io.StringIO()  
-    df = pd.DataFrame({  
-        'Class': list(probabilities.keys()),  
-        'Probability': list(probabilities.values())  
-    })  
-    df.loc[len(df)] = ['Predicted Class', prediction]  
-    df.to_csv(output, index=False)  
-    return output.getvalue()  
+
+   
   
 # --- Main app logic ---  
   
