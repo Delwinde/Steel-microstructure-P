@@ -6,8 +6,7 @@ from keras.preprocessing import image
 from PIL import Image
 import io
 import hashlib
-import base64
-from weasyprint import HTML # Import WeasyPrint
+import base64 
 
 # --- Helper functions ---
 
@@ -71,19 +70,16 @@ def load_my_model(model_path='my_model.keras'):
         st.error(f"Error loading model: {e}. Please ensure 'my_model.keras' is in the correct directory.")
         return None
 
-def generate_html_content(prediction, confidence, prob_data, info, image_base64=None):
-    """Generates the HTML content for the report."""
+def generate_html_report(prediction, confidence, prob_data, info, image_base64=None):
+    """Generates a detailed HTML report of the classification results."""
     html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <title>Steel Microstructure Analysis Report</title>
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; font-size: 14px; line-height: 1.6; }}
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
             h1, h2, h3 {{ color: #333; }}
-            h1 {{ font-size: 2em; text-align: center; margin-bottom: 20px; }}
-            h2 {{ font-size: 1.5em; margin-top: 20px; border-bottom: 2px solid #eee; padding-bottom: 5px; }}
-            h3 {{ font-size: 1.2em; margin-top: 15px; color: #0056b3; }}
             .section {{ margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px; }}
             .section-title {{ font-size: 1.2em; font-weight: bold; margin-bottom: 10px; color: #0056b3; }}
             .result-box {{ background-color: #e6ffe6; border-left: 5px solid #4CAF50; padding: 10px; margin-bottom: 15px; }}
@@ -94,7 +90,6 @@ def generate_html_content(prediction, confidence, prob_data, info, image_base64=
             ul {{ list-style-type: disc; margin-left: 20px; }}
             .image-container {{ text-align: center; margin-top: 20px; }}
             .image-container img {{ max-width: 500px; height: auto; border: 1px solid #ddd; padding: 5px; }}
-            .footer {{ text-align: center; margin-top: 30px; font-size: 0.9em; color: #777; }}
         </style>
     </head>
     <body>
@@ -171,21 +166,11 @@ def generate_html_content(prediction, confidence, prob_data, info, image_base64=
     html_content += """
         </div>
 
-        <p class="footer">Developed by Delwinde Sham-una</p>
+        <p style="text-align: center; margin-top: 30px; font-size: 0.9em; color: #777;">Developed by Delwinde Sham-una</p>
     </body>
     </html>
     """
-    return html_content
-
-def convert_html_to_pdf(html_string):
-    """Converts an HTML string to a PDF byte stream."""
-    try:
-        # WeasyPrint directly reads from a string
-        pdf_bytes = HTML(string=html_string).write_pdf()
-        return pdf_bytes
-    except Exception as e:
-        st.error(f"Error generating PDF: {e}. Ensure WeasyPrint and its system dependencies are correctly installed.")
-        return None
+    return html_content, "microstructure_report.html"
 
 # Define the class indices mapping
 class_indices = {0: 'Martensite or Bainite', 1: 'Pearlite', 2: 'Similar', 3: 'Spheroidized Cementite'}
@@ -372,24 +357,18 @@ if st.session_state['logged_in']:
                 else:
                     st.info("ℹ️ Mixed microstructure detected. Further analysis may be needed for specific applications.")
 
-                # Generate HTML content
-                html_report_content = generate_html_content(
+                # Generate and offer download of the HTML report
+                html_report_content, html_filename = generate_html_report(
                     prediction, confidence, prob_data, info, image_base64=img_base64
                 )
-                
-                # Convert HTML content to PDF bytes
-                pdf_report_bytes = convert_html_to_pdf(html_report_content)
-
-                if pdf_report_bytes:
-                    st.download_button(
-                        label="Download Full Report (PDF)",
-                        data=pdf_report_bytes,
-                        file_name="microstructure_report.pdf",
-                        mime="application/pdf",
-                        key='download_pdf_report_button'
-                    )
-                else:
-                    st.error("Could not generate PDF report. Check logs for details.")
+                st.download_button(
+                    label="Download Full Report (HTML)",
+                    data=html_report_content,
+                    file_name=html_filename,
+                    mime="text/html",
+                    key='download_html_report_button'
+                )
+                st.markdown("**(You can open this HTML file in your browser and use its print functionality to save as PDF.)**")
                 
 # Add footer
 st.markdown("---")
