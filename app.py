@@ -30,7 +30,6 @@ def signup():
         else:
             st.session_state['users'][new_user] = hash_password(new_password)
             st.success('Sign up successful! Please log in.')
-            # After signup, direct to login by setting the option and rerunning
             st.session_state['auth_option'] = 'Log In' 
             st.rerun()
 
@@ -46,7 +45,7 @@ def login():
                 st.session_state['logged_in'] = True
                 st.session_state['current_user'] = user
                 st.success(f'Welcome, {user}!')
-                st.rerun() # Rerun to switch to the main app content
+                st.rerun()
             else:
                 st.error('Incorrect password.')
         else:
@@ -58,7 +57,7 @@ def logout():
         st.session_state['logged_in'] = False
         st.session_state['current_user'] = None
         st.info('You have been logged out.')
-        st.rerun() # Rerun to go back to the authentication screen
+        st.rerun()
 
 @st.cache_resource
 def load_my_model(model_path='my_model.keras'):
@@ -70,17 +69,107 @@ def load_my_model(model_path='my_model.keras'):
         st.error(f"Error loading model: {e}. Please ensure 'my_model.keras' is in the correct directory.")
         return None
 
-def generate_report(prediction, probabilities, filename='microstructure_report.csv'):
-    """Generates a CSV report of the classification results."""
-    output = io.StringIO()
-    df = pd.DataFrame({
-        'Class': list(probabilities.keys()),
-        'Probability': list(probabilities.values())
-    })
-    df.loc[len(df)] = ['Predicted Class', prediction]
-    df.to_csv(output, index=False)
-    return output.getvalue(), filename # Return filename for download button
+def generate_html_report(prediction, confidence, prob_data, info, image_base64=None):
+    """Generates a detailed HTML report of the classification results."""
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Steel Microstructure Analysis Report</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            h1, h2, h3 {{ color: #333; }}
+            .section {{ margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px; }}
+            .section-title {{ font-size: 1.2em; font-weight: bold; margin-bottom: 10px; color: #0056b3; }}
+            .result-box {{ background-color: #e6ffe6; border-left: 5px solid #4CAF50; padding: 10px; margin-bottom: 15px; }}
+            .info-box {{ background-color: #e0f2f7; border-left: 5px solid #2196F3; padding: 10px; margin-bottom: 15px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
+            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+            th {{ background-color: #f2f2f2; }}
+            ul {{ list-style-type: disc; margin-left: 20px; }}
+            .image-container {{ text-align: center; margin-top: 20px; }}
+            .image-container img {{ max-width: 500px; height: auto; border: 1px solid #ddd; padding: 5px; }}
+        </style>
+    </head>
+    <body>
+        <h1>Steel Microstructure Analysis Report</h1>
+        <p>Report generated on: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
 
+        <div class="section result-box">
+            <div class="section-title">Classification Results</div>
+            <p><strong>Predicted Microstructure:</strong> {prediction}</p>
+            <p><strong>Confidence:</strong> {confidence:.1f}%</p>
+        </div>
+    """
+    
+    if image_base64:
+        html_content += f"""
+        <div class="section image-container">
+            <div class="section-title">Uploaded Microstructure Image</div>
+            <img src="data:image/png;base64,{image_base64}" alt="Uploaded Microstructure">
+        </div>
+        """
+
+    html_content += """
+        <div class="section info-box">
+            <div class="section-title">Prediction Probabilities</div>
+            <table>
+                <tr><th>Class</th><th>Probability (%)</th></tr>
+    """
+    for class_name, prob in prob_data.items():
+        html_content += f"<tr><td>{class_name}</td><td>{prob:.1f}</td></tr>"
+
+    html_content += f"""
+            </table>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Detailed Microstructure Information: {prediction}</div>
+            <h3>Description</h3>
+            <p>{info['description']}</p>
+            
+            <h3>Key Characteristics</h3>
+            <ul>
+    """
+    for char in info['characteristics']:
+        html_content += f"<li>{char}</li>"
+    
+    html_content += f"""
+            </ul>
+            
+            <h3>Typical Composition</h3>
+            <p>{info['composition']}</p>
+            
+            <h3>Mechanical Properties</h3>
+            <p>{info['properties']}</p>
+            
+            <h3>Formation Process</h3>
+            <p>{info['formation']}</p>
+            
+            <h3>Industrial Applications</h3>
+            <p>{info['applications']}</p>
+        </div>
+
+        <div class="section result-box">
+            <div class="section-title">Recommendations</div>
+    """
+    if prediction == 'Martensite or Bainite':
+        html_content += "<p>⚠️ This microstructure indicates rapid cooling. Consider tempering if high toughness is required.</p>"
+    elif prediction == 'Pearlite':
+        html_content += "<p>ℹ️ This microstructure provides good strength-ductility balance. Suitable for many structural applications.</p>"
+    elif prediction == 'Spheroidized Cementite':
+        html_content += "<p>✅ This microstructure offers excellent machinability. Ideal for machining operations.</p>"
+    else:
+        html_content += "<p>ℹ️ Mixed microstructure detected. Further analysis may be needed for specific applications.</p>"
+
+    html_content += """
+        </div>
+
+        <p style="text-align: center; margin-top: 30px; font-size: 0.9em; color: #777;">Developed by Delwinde Sham-una</p>
+    </body>
+    </html>
+    """
+    return html_content, "microstructure_report.html"
 
 # Define the class indices mapping
 class_indices = {0: 'Martensite or Bainite', 1: 'Pearlite', 2: 'Similar', 3: 'Spheroidized Cementite'}
@@ -150,7 +239,7 @@ if 'logged_in' not in st.session_state:
 if 'current_user' not in st.session_state:
     st.session_state['current_user'] = None
 if 'auth_option' not in st.session_state:
-    st.session_state['auth_option'] = 'Log In' # Default option
+    st.session_state['auth_option'] = 'Log In'
 
 # Authentication Section
 if not st.session_state['logged_in']:
@@ -159,7 +248,7 @@ if not st.session_state['logged_in']:
         'Choose an option', 
         ['Log In', 'Sign Up'], 
         key='auth_selectbox',
-        index=0 if st.session_state['auth_option'] == 'Log In' else 1 # Maintain selection after rerun
+        index=0 if st.session_state['auth_option'] == 'Log In' else 1
     )
     
     if st.session_state['auth_option'] == 'Log In':
@@ -168,7 +257,7 @@ if not st.session_state['logged_in']:
         signup()
     
     st.info("Please log in or sign up to use the Steel Microstructure Classifier.")
-    st.stop() # Stop further execution until logged in
+    st.stop()
 
 # --- Main application content (only accessible after login) ---
 if st.session_state['logged_in']:
@@ -177,7 +266,7 @@ if st.session_state['logged_in']:
 
     # Load the trained model using st.cache_resource
     model = load_my_model()
-    if model is None: # If model loading failed, stop
+    if model is None:
         st.stop()
 
     # Add sidebar with information
@@ -195,60 +284,49 @@ if st.session_state['logged_in']:
         # Display the uploaded image
         st.subheader("📸 Uploaded Image")
         
-        # Create two columns for better layout
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            # Display the original image
             display_image = Image.open(uploaded_file)
             st.image(display_image, caption="Original Microstructure Image", use_column_width=True)
+            
+            # Prepare image for embedding in HTML report
+            img_byte_arr = io.BytesIO()
+            display_image.save(img_byte_arr, format='PNG')
+            img_base64 = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
         
         with col2:
-            # Load and preprocess the image for prediction
-            # Ensure the image is in RGB format if the model expects it (most CNNs do)
             test_image = Image.open(uploaded_file).convert('RGB').resize((128, 128))
             st.image(test_image, caption="Processed Image (128x128)", use_column_width=True)
         
-        # Preprocess for model prediction
         test_image_array = image.img_to_array(test_image)
-        test_image_array = np.expand_dims(test_image_array, axis=0) # Add batch dimension
+        test_image_array = np.expand_dims(test_image_array, axis=0)
         
-        # Add a prediction button
         if st.button("🔍 Analyze Microstructure", type="primary"):
             with st.spinner("Analyzing microstructure..."):
-                # Use the loaded model to make the prediction    
                 result = model.predict(test_image_array)
                 
-                # Get prediction probabilities
                 probabilities = result[0]
                 predicted_class_index = np.argmax(probabilities)
                 confidence = probabilities[predicted_class_index] * 100
                 
-                # Get the prediction using the class_indices mapping    
                 prediction = class_indices[predicted_class_index]
                 
-                # Display results
                 st.subheader("🎯 Classification Results")
-                
-                # Show prediction with confidence
                 st.success(f"**Predicted Microstructure:** {prediction}")
                 st.info(f"**Confidence:** {confidence:.1f}%")
                 
-                # Show all class probabilities
                 st.subheader("📊 Prediction Probabilities")
                 prob_data = {}
                 for idx, class_name in class_indices.items():
                     prob_data[class_name] = probabilities[idx] * 100
                 
-                # Create a bar chart of probabilities
                 st.bar_chart(prob_data)
                 
-                # Display detailed information about the predicted microstructure
                 st.subheader("📋 Detailed Microstructure Report")
                 
                 info = microstructure_info[prediction]
                 
-                # Create expandable sections for different aspects
                 with st.expander("🔬 Microstructure Description", expanded=True):
                     st.write(info['description'])
                 
@@ -268,7 +346,6 @@ if st.session_state['logged_in']:
                 with st.expander("🏭 Industrial Applications"):
                     st.write(info['applications'])
                 
-                # Add recommendations based on the prediction
                 st.subheader("💡 Recommendations")
                 if prediction == 'Martensite or Bainite':
                     st.warning("⚠️ This microstructure indicates rapid cooling. Consider tempering if high toughness is required.")
@@ -279,16 +356,19 @@ if st.session_state['logged_in']:
                 else:
                     st.info("ℹ️ Mixed microstructure detected. Further analysis may be needed for specific applications.")
 
-                # Generate and offer download of the report
-                csv_report, csv_filename = generate_report(prediction, prob_data)
-                st.download_button(
-                    label="Download Report as CSV",
-                    data=csv_report,
-                    file_name=csv_filename,
-                    mime="text/csv",
-                    key='download_report_button'
+                # Generate and offer download of the HTML report
+                html_report_content, html_filename = generate_html_report(
+                    prediction, confidence, prob_data, info, image_base64=img_base64
                 )
-
+                st.download_button(
+                    label="Download Full Report (HTML)",
+                    data=html_report_content,
+                    file_name=html_filename,
+                    mime="text/html",
+                    key='download_html_report_button'
+                )
+                st.markdown("**(You can open this HTML file in your browser and use its print functionality to save as PDF.)**")
+                
 # Add footer
 st.markdown("---")
 st.markdown("*Developed by Delwinde Sham-una*")
