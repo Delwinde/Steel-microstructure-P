@@ -4,50 +4,57 @@ import numpy as np
 import hashlib  
 import io  
   
-# --- Helper functions ---  
+# Import necessary libraries  
+import hashlib  
   
+# Simulate session state with a dictionary  
+users = {}  
+  
+# Function to hash passwords using SHA-256  
 def hash_password(password):  
     return hashlib.sha256(password.encode()).hexdigest()  
   
+# Function to handle user signup  
 def signup():  
-    st.subheader('Sign Up')  
-    new_user = st.text_input('Choose a username', key='signup_user')  
-    new_password = st.text_input('Choose a password', type='password', key='signup_pass')  
-    if st.button('Sign Up'):  
-        if 'users' not in st.session_state:  
-            st.session_state['users'] = {}  
-        if new_user in st.session_state['users']:  
-            st.error('Username already exists. Please choose another.')  
-        elif new_user == '' or new_password == '':  
-            st.error('Username and password cannot be empty.')  
-        else:  
-            st.session_state['users'][new_user] = hash_password(new_password)  
-            st.success('Sign up successful! Please log in.')  
-            st.session_state['do_rerun'] = True  
+    print("Sign Up")  
+    new_user = input("Choose a username: ")  
+    new_password = input("Choose a password: ")  
+    if new_user in users:  
+        print("Username already exists. Please choose another.")  
+        return  
+    users[new_user] = hash_password(new_password)  
+    print("Signup successful!")  
   
+# Function to handle user login  
 def login():  
-    st.subheader('Log In')  
-    user = st.text_input('Username', key='login_user')  
-    password = st.text_input('Password', type='password', key='login_pass')  
-    if st.button('Log In'):  
-        if 'users' in st.session_state and user in st.session_state['users']:  
-            if st.session_state['users'][user] == hash_password(password):  
-                st.session_state['logged_in'] = True  
-                st.session_state['current_user'] = user  
-                st.session_state['do_rerun'] = True  
-            else:  
-                st.error('Incorrect password.')  
+    print("Login")  
+    user = input("Username: ")  
+    password = input("Password: ")  
+    if user not in users:  
+        print("User does not exist.")  
+        return  
+    if users[user] == hash_password(password):  
+        print("Login successful!")  
+    else:  
+        print("Incorrect password.")  
+  
+# Main loop to interact with the user  
+def main():  
+    while True:  
+        print("\nOptions: signup | login | quit")  
+        action = input("What would you like to do? ").strip().lower()  
+        if action == "signup":  
+            signup()  
+        elif action == "login":  
+            login()  
+        elif action == "quit":  
+            print("Exiting program.")  
+            break  
         else:  
-            st.error('User not found. Please sign up.')  
+            print("Invalid option. Please choose signup, login, or quit.")  
   
-def logout():  
-    if st.button('Log Out'):  
-        st.session_state['logged_in'] = False  
-        st.session_state['current_user'] = None  
-        st.session_state['do_rerun'] = True  
-  
-
-   
+# Run the main loop  
+main()  
   
 # --- Main app logic ---  
   
