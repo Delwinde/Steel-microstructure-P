@@ -1,63 +1,91 @@
 import streamlit as st  
 import pandas as pd  
 import numpy as np  
+from keras.models import load_model  
+from keras.preprocessing import image  
+from PIL import Image
+import io
 import hashlib  
-import io  
+
   
-# Import necessary libraries  
-import hashlib  
+# --- Helper functions ---  
   
-# Simulate session state with a dictionary  
-users = {}  
-  
-# Function to hash passwords using SHA-256  
 def hash_password(password):  
     return hashlib.sha256(password.encode()).hexdigest()  
   
-# Function to handle user signup  
 def signup():  
-    print("Sign Up")  
-    new_user = input("Choose a username: ")  
-    new_password = input("Choose a password: ")  
-    if new_user in users:  
-        print("Username already exists. Please choose another.")  
-        return  
-    users[new_user] = hash_password(new_password)  
-    print("Signup successful!")  
-  
-# Function to handle user login  
-def login():  
-    print("Login")  
-    user = input("Username: ")  
-    password = input("Password: ")  
-    if user not in users:  
-        print("User does not exist.")  
-        return  
-    if users[user] == hash_password(password):  
-        print("Login successful!")  
-    else:  
-        print("Incorrect password.")  
-  
-# Main loop to interact with the user  
-def main():  
-    while True:  
-        print("\nOptions: signup | login | quit")  
-        action = input("What would you like to do? ").strip().lower()  
-        if action == "signup":  
-            signup()  
-        elif action == "login":  
-            login()  
-        elif action == "quit":  
-            print("Exiting program.")  
-            break  
+    st.subheader('Sign Up')  
+    new_user = st.text_input('Choose a username', key='signup_user')  
+    new_password = st.text_input('Choose a password', type='password', key='signup_pass')  
+    if st.button('Sign Up'):  
+        if 'users' not in st.session_state:  
+            st.session_state['users'] = {}  
+        if new_user in st.session_state['users']:  
+            st.error('Username already exists. Please choose another.')  
+        elif new_user == '' or new_password == '':  
+            st.error('Username and password cannot be empty.')  
         else:  
-            print("Invalid option. Please choose signup, login, or quit.")  
+            st.session_state['users'][new_user] = hash_password(new_password)  
+            st.success('Sign up successful! Please log in.')  
+            st.session_state['do_rerun'] = True  
   
-# Run the main loop  
-main()  
+def login():  
+    st.subheader('Log In')  
+    user = st.text_input('Username', key='login_user')  
+    password = st.text_input('Password', type='password', key='login_pass')  
+    if st.button('Log In'):  
+        if 'users' in st.session_state and user in st.session_state['users']:  
+            if st.session_state['users'][user] == hash_password(password):  
+                st.session_state['logged_in'] = True  
+                st.session_state['current_user'] = user  
+                st.session_state['do_rerun'] = True  
+            else:  
+                st.error('Incorrect password.')  
+        else:  
+            st.error('User not found. Please sign up.')  
+  
+def logout():  
+    if st.button('Log Out'):  
+        st.session_state['logged_in'] = False  
+        st.session_state['current_user'] = None  
+        st.session_state['do_rerun'] = True  
+  
+def generate_report(prediction, probabilities, filename='microstructure_report.csv'):  
+    output = io.StringIO()  
+    df = pd.DataFrame({  
+        'Class': list(probabilities.keys()),  
+        'Probability': list(probabilities.values())  
+    })  
+    df.loc[len(df)] = ['Predicted Class', prediction]  
+    df.to_csv(output, index=False)  
+    return output.getvalue()  
   
 # --- Main app logic ---  
   
+st.title('Steel Microstructure Classification')  
+  
+# Initialize session state  
+if 'users' not in st.session_state:  
+    st.session_state['users'] = {}  
+if 'logged_in' not in st.session_state:  
+    st.session_state['logged_in'] = False  
+if 'current_user' not in st.session_state:  
+    st.session_state['current_user'] = None  
+  
+# Authentication  
+if not st.session_state['logged_in']:  
+    option = st.selectbox('Choose an option', ['Log In', 'Sign Up'])  
+    if option == 'Log In':  
+        login()  
+    else:  
+        signup()  
+    # Handle rerun after login/signup  
+    if st.session_state.get('do_rerun', False):  
+        st.session_state['do_rerun'] = False  
+        st.experimental_rerun()  
+    st.stop()  
+  
+# Main app after login  
 # Load the trained model  
 model = load_model('my_model.keras')  
 
@@ -222,4 +250,5 @@ if uploaded_file is not None:
 st.markdown("---")
 st.markdown("*Developed by Delwinde Sham-una*")
 
-    
+   
+  
