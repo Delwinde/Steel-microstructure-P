@@ -6,6 +6,7 @@ from keras.preprocessing import image
 from PIL import Image
 import io
 import hashlib
+import base64
 
 # --- Helper functions ---
 
