@@ -222,14 +222,4 @@ if uploaded_file is not None:
 st.markdown("---")
 st.markdown("*Developed by Delwinde Sham-una*")
 
-    # Download report  
-    report_csv = generate_report(prediction, probabilities)  
-    st.download_button(  
-        label='Download Detailed Report',  
-        data=report_csv,  
-        file_name='microstructure_report.csv',  
-        mime='text/csv'  
-    )  
-else:  
-    st.info('Please upload a CSV file to begin.')  
-  
+    
