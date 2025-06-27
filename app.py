@@ -5,60 +5,9 @@ from keras.models import load_model
 from keras.preprocessing import image
 from PIL import Image
 import io
-import hashlib
-import base64 
+import base64
 
 # --- Helper functions ---
-
-def hash_password(password):
-    """Hashes the given password using SHA256."""
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def signup():
-    """Handles user sign-up."""
-    st.subheader('Sign Up')
-    new_user = st.text_input('Choose a username', key='signup_user_input')
-    new_password = st.text_input('Choose a password', type='password', key='signup_pass_input')
-    
-    if st.button('Sign Up', key='signup_button'):
-        if 'users' not in st.session_state:
-            st.session_state['users'] = {}
-        
-        if new_user in st.session_state['users']:
-            st.error('Username already exists. Please choose another.')
-        elif new_user == '' or new_password == '':
-            st.error('Username and password cannot be empty.')
-        else:
-            st.session_state['users'][new_user] = hash_password(new_password)
-            st.success('Sign up successful! Please log in.')
-            st.session_state['auth_option'] = 'Log In' 
-            st.rerun()
-
-def login():
-    """Handles user login."""
-    st.subheader('Log In')
-    user = st.text_input('Username', key='login_user_input')
-    password = st.text_input('Password', type='password', key='login_pass_input')
-    
-    if st.button('Log In', key='login_button'):
-        if 'users' in st.session_state and user in st.session_state['users']:
-            if st.session_state['users'][user] == hash_password(password):
-                st.session_state['logged_in'] = True
-                st.session_state['current_user'] = user
-                st.success(f'Welcome, {user}!')
-                st.rerun()
-            else:
-                st.error('Incorrect password.')
-        else:
-            st.error('User not found. Please sign up.')
-
-def logout():
-    """Handles user logout."""
-    if st.button('Log Out', key='logout_button'):
-        st.session_state['logged_in'] = False
-        st.session_state['current_user'] = None
-        st.info('You have been logged out.')
-        st.rerun()
 
 @st.cache_resource
 def load_my_model(model_path='my_model.keras'):
@@ -232,144 +181,111 @@ microstructure_info = {
 st.title('🔬 Steel Microstructure Classification')
 st.write("Upload an image of steel microstructure to get AI-powered classification and detailed analysis.")
 
-# Initialize session state for authentication
-if 'users' not in st.session_state:
-    st.session_state['users'] = {}
-if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = False
-if 'current_user' not in st.session_state:
-    st.session_state['current_user'] = None
-if 'auth_option' not in st.session_state:
-    st.session_state['auth_option'] = 'Log In'
-
-# Authentication Section
-if not st.session_state['logged_in']:
-    st.sidebar.title("Authentication")
-    st.session_state['auth_option'] = st.sidebar.selectbox(
-        'Choose an option', 
-        ['Log In', 'Sign Up'], 
-        key='auth_selectbox',
-        index=0 if st.session_state['auth_option'] == 'Log In' else 1
-    )
-    
-    if st.session_state['auth_option'] == 'Log In':
-        login()
-    else:
-        signup()
-    
-    st.info("Please log in or sign up to use the Steel Microstructure Classifier.")
+# Load the trained model using st.cache_resource
+model = load_my_model()
+if model is None:
     st.stop()
 
-# --- Main application content (only accessible after login) ---
-if st.session_state['logged_in']:
-    st.sidebar.success(f'Welcome, {st.session_state["current_user"]}!')
-    logout()
+# Add sidebar with information
+st.sidebar.title("About This App")
+st.sidebar.write("This application uses a Convolutional Neural Network (CNN) to classify steel microstructures into four main categories:")
+st.sidebar.write("• Martensite or Bainite")
+st.sidebar.write("• Pearlite")    
+st.sidebar.write("• Similar (Mixed phases)")
+st.sidebar.write("• Spheroidized Cementite")
 
-    # Load the trained model using st.cache_resource
-    model = load_my_model()
-    if model is None:
-        st.stop()
+# File uploader for image input    
+uploaded_file = st.file_uploader("Choose a microstructure image...", type=["jpg", "jpeg", "png", "tif"])    
 
-    # Add sidebar with information
-    st.sidebar.title("About This App")
-    st.sidebar.write("This application uses a Convolutional Neural Network (CNN) to classify steel microstructures into four main categories:")
-    st.sidebar.write("• Martensite or Bainite")
-    st.sidebar.write("• Pearlite")    
-    st.sidebar.write("• Similar (Mixed phases)")
-    st.sidebar.write("• Spheroidized Cementite")
-
-    # File uploader for image input    
-    uploaded_file = st.file_uploader("Choose a microstructure image...", type=["jpg", "jpeg", "png", "tif"])    
-
-    if uploaded_file is not None:
-        # Display the uploaded image
-        st.subheader("📸 Uploaded Image")
+if uploaded_file is not None:
+    # Display the uploaded image
+    st.subheader("📸 Uploaded Image")
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        display_image = Image.open(uploaded_file)
+        st.image(display_image, caption="Original Microstructure Image", use_column_width=True)
         
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            display_image = Image.open(uploaded_file)
-            st.image(display_image, caption="Original Microstructure Image", use_column_width=True)
+        # Prepare image for embedding in HTML report
+        img_byte_arr = io.BytesIO()
+        display_image.save(img_byte_arr, format='PNG')
+        img_base64 = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+    
+    with col2:
+        test_image = Image.open(uploaded_file).convert('RGB').resize((128, 128))
+        st.image(test_image, caption="Processed Image (128x128)", use_column_width=True)
+    
+    test_image_array = image.img_to_array(test_image)
+    test_image_array = np.expand_dims(test_image_array, axis=0)
+    
+    if st.button("🔍 Analyze Microstructure", type="primary"):
+        with st.spinner("Analyzing microstructure..."):
+            result = model.predict(test_image_array)
             
-            # Prepare image for embedding in HTML report
-            img_byte_arr = io.BytesIO()
-            display_image.save(img_byte_arr, format='PNG')
-            img_base64 = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
-        
-        with col2:
-            test_image = Image.open(uploaded_file).convert('RGB').resize((128, 128))
-            st.image(test_image, caption="Processed Image (128x128)", use_column_width=True)
-        
-        test_image_array = image.img_to_array(test_image)
-        test_image_array = np.expand_dims(test_image_array, axis=0)
-        
-        if st.button("🔍 Analyze Microstructure", type="primary"):
-            with st.spinner("Analyzing microstructure..."):
-                result = model.predict(test_image_array)
-                
-                probabilities = result[0]
-                predicted_class_index = np.argmax(probabilities)
-                confidence = probabilities[predicted_class_index] * 100
-                
-                prediction = class_indices[predicted_class_index]
-                
-                st.subheader("🎯 Classification Results")
-                st.success(f"**Predicted Microstructure:** {prediction}")
-                st.info(f"**Confidence:** {confidence:.1f}%")
-                
-                st.subheader("📊 Prediction Probabilities")
-                prob_data = {}
-                for idx, class_name in class_indices.items():
-                    prob_data[class_name] = probabilities[idx] * 100
-                
-                st.bar_chart(prob_data)
-                
-                st.subheader("📋 Detailed Microstructure Report")
-                
-                info = microstructure_info[prediction]
-                
-                with st.expander("🔬 Microstructure Description", expanded=True):
-                    st.write(info['description'])
-                
-                with st.expander("⚙️ Key Characteristics"):
-                    for char in info['characteristics']:
-                        st.write(f"• {char}")
-                
-                with st.expander("🧪 Typical Composition"):
-                    st.write(info['composition'])
-                
-                with st.expander("💪 Mechanical Properties"):
-                    st.write(info['properties'])
-                
-                with st.expander("🔥 Formation Process"):
-                    st.write(info['formation'])
-                
-                with st.expander("🏭 Industrial Applications"):
-                    st.write(info['applications'])
-                
-                st.subheader("💡 Recommendations")
-                if prediction == 'Martensite or Bainite':
-                    st.warning("⚠️ This microstructure indicates rapid cooling. Consider tempering if high toughness is required.")
-                elif prediction == 'Pearlite':
-                    st.info("ℹ️ This microstructure provides good strength-ductility balance. Suitable for many structural applications.")
-                elif prediction == 'Spheroidized Cementite':
-                    st.success("✅ This microstructure offers excellent machinability. Ideal for machining operations.")
-                else:
-                    st.info("ℹ️ Mixed microstructure detected. Further analysis may be needed for specific applications.")
+            probabilities = result[0]
+            predicted_class_index = np.argmax(probabilities)
+            confidence = probabilities[predicted_class_index] * 100
+            
+            prediction = class_indices[predicted_class_index]
+            
+            st.subheader("🎯 Classification Results")
+            st.success(f"**Predicted Microstructure:** {prediction}")
+            st.info(f"**Confidence:** {confidence:.1f}%")
+            
+            st.subheader("📊 Prediction Probabilities")
+            prob_data = {}
+            for idx, class_name in class_indices.items():
+                prob_data[class_name] = probabilities[idx] * 100
+            
+            st.bar_chart(prob_data)
+            
+            st.subheader("📋 Detailed Microstructure Report")
+            
+            info = microstructure_info[prediction]
+            
+            with st.expander("🔬 Microstructure Description", expanded=True):
+                st.write(info['description'])
+            
+            with st.expander("⚙️ Key Characteristics"):
+                for char in info['characteristics']:
+                    st.write(f"• {char}")
+            
+            with st.expander("🧪 Typical Composition"):
+                st.write(info['composition'])
+            
+            with st.expander("💪 Mechanical Properties"):
+                st.write(info['properties'])
+            
+            with st.expander("🔥 Formation Process"):
+                st.write(info['formation'])
+            
+            with st.expander("🏭 Industrial Applications"):
+                st.write(info['applications'])
+            
+            st.subheader("💡 Recommendations")
+            if prediction == 'Martensite or Bainite':
+                st.warning("⚠️ This microstructure indicates rapid cooling. Consider tempering if high toughness is required.")
+            elif prediction == 'Pearlite':
+                st.info("ℹ️ This microstructure provides good strength-ductility balance. Suitable for many structural applications.")
+            elif prediction == 'Spheroidized Cementite':
+                st.success("✅ This microstructure offers excellent machinability. Ideal for machining operations.")
+            else:
+                st.info("ℹ️ Mixed microstructure detected. Further analysis may be needed for specific applications.")
 
-                # Generate and offer download of the HTML report
-                html_report_content, html_filename = generate_html_report(
-                    prediction, confidence, prob_data, info, image_base64=img_base64
-                )
-                st.download_button(
-                    label="Download Full Report (HTML)",
-                    data=html_report_content,
-                    file_name=html_filename,
-                    mime="text/html",
-                    key='download_html_report_button'
-                )
-                st.markdown("**(You can open this HTML file in your browser and use its print functionality to save as PDF.)**")
-                
+            # Generate and offer download of the HTML report
+            html_report_content, html_filename = generate_html_report(
+                prediction, confidence, prob_data, info, image_base64=img_base64
+            )
+            st.download_button(
+                label="Download Full Report (HTML)",
+                data=html_report_content,
+                file_name=html_filename,
+                mime="text/html",
+                key='download_html_report_button'
+            )
+            st.markdown("**(You can open this HTML file in your browser and use its print functionality to save as PDF.)**")
+            
 # Add footer
 st.markdown("---")
 st.markdown("*Developed by Delwinde Sham-una*")
