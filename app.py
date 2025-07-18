@@ -190,9 +190,10 @@ if model is None:
 st.sidebar.title("About This App")
 st.sidebar.write("This application uses a Convolutional Neural Network (CNN) to classify steel microstructures into four main categories:")
 st.sidebar.write("• Martensite or Bainite")
-st.sidebar.write("• Pearlite")    
+st.sidebar.write("• Pearlite") 
+st.sidebar.write("• Network")   
 st.sidebar.write("• Similar (Mixed phases)")
-st.sidebar.write("• Spheroidized Cementite")
+st.sidebar.write("• Spheroidized")
 
 # File uploader for image input    
 uploaded_file = st.file_uploader("Choose a microstructure image...", type=["jpg", "jpeg", "png", "tif"])    
